@@ -249,11 +249,12 @@ end
         %into NED. Then rotate by the initial Vicon orientation and add the
         %initial Vicon position.
         for ii = 1:1:length(vslamTr.time)
-            temp =  r_apply_q([vslamTr.tx(ii,1); vslamTr.ty(ii,1); vslamTr.tz(ii,1)],[vslamTr.rw(1,1);vslamTr.rx(1,1);vslamTr.ry(1,1);vslamTr.rz(1,1)]);
-            temp2 = r_apply_q([-temp(3);-temp(1);-temp(2)],                     r_inv_q([viconRe.rw(1,1);viconRe.rx(1,1);viconRe.ry(1,1);viconRe.rz(1,1)]));
-            vslamTr.tx(ii,1) = -temp2(1) + viconRe.tx(1,1);
-            vslamTr.ty(ii,1) = -temp2(2) + viconRe.ty(1,1);
-            vslamTr.tz(ii,1) = -temp2(3) + viconRe.tz(1,1);
+            temp =  (-1)*r_apply_q([vslamTr.tx(ii,1); vslamTr.ty(ii,1); vslamTr.tz(ii,1)],[vslamTr.rw(1,1);vslamTr.rx(1,1);vslamTr.ry(1,1);vslamTr.rz(1,1)]);
+            temp = [temp(3);temp(1);temp(2)];
+            temp2 = (-1)*r_apply_q([temp(1);temp(2);temp(3)],r_inv_q([viconRe.rw(1,1);viconRe.rx(1,1);viconRe.ry(1,1);viconRe.rz(1,1)]));
+            vslamTr.tx(ii,1) = temp2(1) + viconRe.tx(1,1);
+            vslamTr.ty(ii,1) = temp2(2) + viconRe.ty(1,1);
+            vslamTr.tz(ii,1) = temp2(3) + viconRe.tz(1,1);
         end
         clear temp;
        
@@ -277,7 +278,7 @@ end
             %2) Swap axes to convert from vision(v) to NED(n) (wn=wv,xn=zv,yn=xv,zn=yv)
             temp2 = [temp(1) ; temp(4) ; temp(2) ; temp(3)];
             
-            if 1
+            if 0
                 %Find euler
                 tempeuler = r_q_to_e(temp2);
                 %Find means
@@ -313,12 +314,18 @@ end
         
 if 1
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %Correct for camera offset
+        %Correct for camera offset (post)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %Basically the camera is 0.195m further back in the body x axis than reported. Hence
-        %all measurements need 0.195 removing in the (rotated)x direction
+        %all measurements need 0.195 removing in the (rotated)x direction.
+        %This uses the current orientation in the NED frame hence must
+        %occur after the other transforms
         for ii=1:1:length(vslamTr.time)
-            temp = r_apply_q([0.195;0;0],r_inv_q([viconRe.rw(ii,1);viconRe.rx(ii,1);viconRe.ry(ii,1);viconRe.rz(ii,1)]));
+%             rotdiff(ii,1) = viconRe.rw(ii,1) - vslamTr.rw(ii,1);
+%             rotdiff(ii,2) = viconRe.rx(ii,1) - vslamTr.rx(ii,1);
+%             rotdiff(ii,3) = viconRe.ry(ii,1) - vslamTr.ry(ii,1);
+%             rotdiff(ii,4) = viconRe.rz(ii,1) - vslamTr.rz(ii,1);
+            temp = r_apply_q([0.195;0;0],r_inv_q([vslamTr.rw(ii,1);vslamTr.rx(ii,1);vslamTr.ry(ii,1);vslamTr.rz(ii,1)]));
             if ii==1
                 initoffset = temp;
             end
@@ -328,6 +335,11 @@ if 1
         end
         clear temp;
 end
+figure;hold on;
+plot(vslamTr.time,rotdiff(:,1),'-r');
+plot(vslamTr.time,rotdiff(:,2),'-g');
+plot(vslamTr.time,rotdiff(:,3),'-b');
+plot(vslamTr.time,rotdiff(:,4),'-m');
     
 
 

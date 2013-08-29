@@ -31,7 +31,7 @@ end
 %Load the file using the standard MATLAB function
 %NOTE: this step may cause bugs depending on how well MATLAB interprets the
 %data.
-temp = importdata(input_args);
+temp = importdata(input_args,',',1);
 
 %Check if any data was loaded
 if ~isempty(temp)

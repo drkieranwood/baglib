@@ -278,7 +278,7 @@ end
             %2) Swap axes to convert from vision(v) to NED(n) (wn=wv,xn=zv,yn=xv,zn=yv)
             temp2 = [temp(1) ; temp(4) ; temp(2) ; temp(3)];
             
-            if 0
+            if 1
                 %Find euler
                 tempeuler = r_q_to_e(temp2);
                 %Find means
@@ -336,10 +336,10 @@ if 1
         clear temp;
 end
 figure;hold on;
-plot(vslamTr.time,rotdiff(:,1),'-r');
-plot(vslamTr.time,rotdiff(:,2),'-g');
-plot(vslamTr.time,rotdiff(:,3),'-b');
-plot(vslamTr.time,rotdiff(:,4),'-m');
+% plot(vslamTr.time,rotdiff(:,1),'-r');
+% plot(vslamTr.time,rotdiff(:,2),'-g');
+% plot(vslamTr.time,rotdiff(:,3),'-b');
+% plot(vslamTr.time,rotdiff(:,4),'-m');
     
 
 

@@ -10,9 +10,9 @@ cmdvelData = bag_load_nedcmdvel('cmd_vel',0);
 
 %Pick Vicon, pos, rot axes. 1=x, 2=y, 3=z
 %Pick cmdvel axis  1=x, 2=y, 3=z
-viconPosAxis = 2;
-viconRotAxis = 2;
-cmdvelPosAxis = 1;
+viconPosAxis = 1;
+viconRotAxis = 1;
+cmdvelPosAxis = 2;
 
 if viconPosAxis==1
     plotPosData = viconData.tx;

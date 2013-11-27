@@ -34,7 +34,6 @@ vslamRaw = ros_load_ptam('ptam_pose_world',0);
 viconPresent = ~isempty(viconRaw);
 vslamPresent = ~isempty(vslamRaw);
 if (viconPresent && vslamPresent)
-
     %======================================================================
     % TIME ADJUSTMENT
     %======================================================================
@@ -78,15 +77,15 @@ if (viconPresent && vslamPresent)
     %therefore needs rotating into the world frame, by applying the current
     %orientation inverse (the effect is quite small for pitching motions
     %but can become more pronounced for larger yaw motions).
-if 0
-    for ii=1:1:length(viconRaw.time)
-        temp = r_apply_q([0.195;0;0],r_inv_q([viconRaw.rw(ii,1);viconRaw.rx(ii,1);viconRaw.ry(ii,1);viconRaw.rz(ii,1)]));
-        viconRaw.tx(ii,1) = viconRaw.tx(ii,1) + temp(1);
-        viconRaw.ty(ii,1) = viconRaw.ty(ii,1) + temp(2);
-        viconRaw.tz(ii,1) = viconRaw.tz(ii,1) + temp(3);
+    if 0
+        for ii=1:1:length(viconRaw.time)
+            temp = r_apply_q([0.195;0;0],r_inv_q([viconRaw.rw(ii,1);viconRaw.rx(ii,1);viconRaw.ry(ii,1);viconRaw.rz(ii,1)]));
+            viconRaw.tx(ii,1) = viconRaw.tx(ii,1) + temp(1);
+            viconRaw.ty(ii,1) = viconRaw.ty(ii,1) + temp(2);
+            viconRaw.tz(ii,1) = viconRaw.tz(ii,1) + temp(3);
+        end
+        clear temp;
     end
-    clear temp;
-end
        
     %======================================================================
     % VICON: PLOTS
@@ -143,7 +142,7 @@ end
     viconRe.rpsi   = interp1(viconRaw.time(:),viconRaw.rpsi(:)  ,vslamRaw.time(:));
     
     %Re-normalise the quarternions. This is not a perfect way to
-    %interpolate quarternions but it is close for fast sampling. See the
+    %interpolate quarternions but it is close enough for fast sample rates. See the
     %'slerp' algorithm or 'quarternion interpolation'
     for ii = 1:1:length(viconRe.time);
         temp = r_norm_q([viconRe.rw(ii);viconRe.rx(ii);viconRe.ry(ii);viconRe.rz(ii)]);
@@ -252,8 +251,8 @@ end
             temp =  (-1)*r_apply_q([vslamTr.tx(ii,1); vslamTr.ty(ii,1); vslamTr.tz(ii,1)],[vslamTr.rw(1,1);vslamTr.rx(1,1);vslamTr.ry(1,1);vslamTr.rz(1,1)]);
             temp = [temp(3);temp(1);temp(2)];
             temp2 = (-1)*r_apply_q([temp(1);temp(2);temp(3)],r_inv_q([viconRe.rw(1,1);viconRe.rx(1,1);viconRe.ry(1,1);viconRe.rz(1,1)]));
-            vslamTr.tx(ii,1) = temp2(1) + viconRe.tx(1,1);
-            vslamTr.ty(ii,1) = temp2(2) + viconRe.ty(1,1);
+            vslamTr.tx(ii,1) = temp2(1) + viconRe.tx(1,1)+0.195;
+            vslamTr.ty(ii,1) = temp2(2) + viconRe.ty(1,1);% - 0.195;
             vslamTr.tz(ii,1) = temp2(3) + viconRe.tz(1,1);
         end
         clear temp;
@@ -278,7 +277,7 @@ end
             %2) Swap axes to convert from vision(v) to NED(n) (wn=wv,xn=zv,yn=xv,zn=yv)
             temp2 = [temp(1) ; temp(4) ; temp(2) ; temp(3)];
             
-            if 1
+            if 0
                 %Find euler
                 tempeuler = r_q_to_e(temp2);
                 %Find means
@@ -311,35 +310,29 @@ end
         end 
         clear temp;
         
-        
-if 1
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %Correct for camera offset (post)
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %Basically the camera is 0.195m further back in the body x axis than reported. Hence
-        %all measurements need 0.195 removing in the (rotated)x direction.
-        %This uses the current orientation in the NED frame hence must
-        %occur after the other transforms
-        for ii=1:1:length(vslamTr.time)
-%             rotdiff(ii,1) = viconRe.rw(ii,1) - vslamTr.rw(ii,1);
-%             rotdiff(ii,2) = viconRe.rx(ii,1) - vslamTr.rx(ii,1);
-%             rotdiff(ii,3) = viconRe.ry(ii,1) - vslamTr.ry(ii,1);
-%             rotdiff(ii,4) = viconRe.rz(ii,1) - vslamTr.rz(ii,1);
-            temp = r_apply_q([0.195;0;0],r_inv_q([vslamTr.rw(ii,1);vslamTr.rx(ii,1);vslamTr.ry(ii,1);vslamTr.rz(ii,1)]));
-            if ii==1
-                initoffset = temp;
+        tempXX = vslamTr.tx(:,1)-0.195;
+        tempYY = vslamTr.ty(:,1);% + 0.195;
+        tempZZ = vslamTr.tz(:,1);
+        if 1
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %Correct for camera offset (post)
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %Basically the camera is 0.195m further back in the body x axis than reported. Hence
+            %all measurements need 0.195 removing in the (rotated)x direction.
+            %This uses the current orientation in the NED frame hence must
+            %occur after the other transforms
+            for ii=1:1:length(vslamTr.time)
+                temp = r_apply_q([0.195;0;0],r_inv_q([vslamTr.rw(ii,1);vslamTr.rx(ii,1);vslamTr.ry(ii,1);vslamTr.rz(ii,1)]));
+                if ii==1
+                    initoffset = temp;
+                end
+                vslamTr.tx(ii,1) = vslamTr.tx(ii,1) - temp(1); 
+                vslamTr.ty(ii,1) = vslamTr.ty(ii,1) - temp(2);
+                vslamTr.tz(ii,1) = vslamTr.tz(ii,1) - temp(3);
             end
-            vslamTr.tx(ii,1) = vslamTr.tx(ii,1) - (temp(1) - initoffset(1));
-            vslamTr.ty(ii,1) = vslamTr.ty(ii,1) - (temp(2) - initoffset(2));
-            vslamTr.tz(ii,1) = vslamTr.tz(ii,1) - (temp(3) - initoffset(3));
+            clear temp;
         end
-        clear temp;
-end
 figure;hold on;
-% plot(vslamTr.time,rotdiff(:,1),'-r');
-% plot(vslamTr.time,rotdiff(:,2),'-g');
-% plot(vslamTr.time,rotdiff(:,3),'-b');
-% plot(vslamTr.time,rotdiff(:,4),'-m');
     
 
 
@@ -472,34 +465,59 @@ figure;hold on;
     end
     
     if plot_on
-        %Plot the original Vicon data against the transformed Vslam data
+        %Plot the original Vicon data against the transformed VSLAM data
         h1 = figure('name','PLOT: Transform Comparison: Translation'); hold on;
-        plot(viconRaw.time,viconRaw.tx,'-r');
-        plot(viconRaw.time,viconRaw.ty,'-g');
-        plot(viconRaw.time,viconRaw.tz,'-b');
-        plot(vslamRaw.time,vslamTr.tx,'xr');
-        plot(vslamRaw.time,vslamTr.ty,'xg');
-        plot(vslamRaw.time,vslamTr.tz,'xb');
-
+        plot(viconRaw.time,viconRaw.tx,'--k');
+        plot(vslamRaw.time,vslamTr.tx,'-k');
+        plot(vslamRaw.time(2000:2800),tempXX(2000:2800),':k');
+        
+        plot(viconRaw.time,viconRaw.ty,'--k');
+        plot(vslamRaw.time,vslamTr.ty,'-k');
+        plot(vslamRaw.time(2000:2800),tempYY(2000:2800),':k');
+        
+        plot(viconRaw.time,viconRaw.tz,'--k');
+        plot(vslamRaw.time,vslamTr.tz,'-k');
+        plot(vslamRaw.time(2000:2800),tempZZ(2000:2800),':k');
+        %Add annotation
+        text(viconRaw.time(1500),viconRaw.tx(1500)+0.12,'$x_{I}$','interpreter','latex');
+        text(viconRaw.time(1500),viconRaw.ty(1500)+0.12,'$y_{I}$','interpreter','latex');
+        text(viconRaw.time(1500),viconRaw.tz(1500)+0.12,'$z_{I}$','interpreter','latex');
+        
         xlabel('Time (s)');
-        ylabel('Pos. (m)');
-        legend('ViconX','ViconY','ViconZ','VslamX','VslamY','VslamZ');
+        ylabel('Position (m)');
+        legend('Vicon','VSLAM','Non-camer corr.');
+        
+        text(75,0.5,'pitch','interpreter','latex');
+        arrow([75 0.5],[viconRaw.time(7000) viconRaw.ty(7000)+0.05]);
+        text(98,2.5,'roll','interpreter','latex');
+        arrow([98 2.5],[viconRaw.time(9400) viconRaw.tx(9400)+0.05]);
+        text(130,1.0,'yaw','interpreter','latex');
+        arrow([130 1.0],[viconRaw.time(12000) viconRaw.tx(12000)+0.2]);
+        xlim([0 143]);
         
         %Plot the original Vicon data against the transformed Vslam data
         %Euler angles
         h1 = figure('name','PLOT: Transform Comparison: Rotation'); hold on;
-        plot(viconRaw.time,viconRaw.rphi,'-r');
-        plot(viconRaw.time,viconRaw.rtheta,'-g');
-        plot(viconRaw.time,viconRaw.rpsi,'-b');
-        plot(vslamRaw.time,vslamTr.rphi,'xr');
-        plot(vslamRaw.time,vslamTr.rtheta,'xg');
-        plot(vslamRaw.time,vslamTr.rpsi,'xb');
+        plot(viconRaw.time,viconRaw.rphi,'--k');
+        plot(vslamRaw.time,vslamTr.rphi,'-k');
+       
+        plot(viconRaw.time,viconRaw.rtheta,'--k');
+        plot(vslamRaw.time,vslamTr.rtheta,'-k');
         
-        plot(vslamRaw.time,mean(viconRaw.rphi),'-r');
-        plot(vslamRaw.time,mean(viconRaw.rtheta),'-g');
+        plot(viconRaw.time,viconRaw.rpsi,'--k');
+        plot(vslamRaw.time,vslamTr.rpsi,'-k');
+        
+        text(79,-0.3,'pitch','interpreter','latex');
+        arrow([79 -0.3],[viconRaw.time(7700) viconRaw.rtheta(7700)]);
+        text(103,-0.4,'roll','interpreter','latex');
+        arrow([103 -0.4],[viconRaw.time(10100) viconRaw.rphi(10100)]);
+        text(126,-0.8,'yaw','interpreter','latex');
+        arrow([126 -0.8],[viconRaw.time(12400) viconRaw.rpsi(12400)]);
+        xlim([0 143]);
+        
         xlabel('Time (s)');
-        ylabel('Rot. (rads)');
-        legend('Vicon \phi','Vicon \theta','Vicon \psi','Vslam \phi','Vslam \theta','Vslam \psi');
+        ylabel('Rotation (rads)');
+        legend('Vicon','VSLAM');
         
         if 1
             %Plot the original Vicon data against the transformed Vslam
